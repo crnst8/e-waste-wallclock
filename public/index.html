@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=1194, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Dashboard">
+  <meta name="format-detection" content="telephone=no">
+  <title>Dashboard</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="warmth" id="warmth"></div>
+
+  <main class="dashboard">
+    <nav class="rail">
+      <button class="iconbtn" id="houseBtn" data-state="off" type="button" aria-label="House lights">
+        <img class="ic-off" src="/buttons/lights-house-off.png" alt="">
+        <img class="ic-on" src="/buttons/lights-house-on.png" alt="">
+      </button>
+      <button class="iconbtn" id="upstairsBtn" data-state="off" type="button" aria-label="Upstairs lights">
+        <img class="ic-off" src="/buttons/lights-upstairs-off.png" alt="">
+        <img class="ic-on" src="/buttons/lights-upstairs-on.png" alt="">
+      </button>
+      <button class="iconbtn" id="alarmBtn" data-state="off" type="button" aria-label="Alarm">
+        <img class="ic-off" src="/buttons/alarm-off.png" alt="">
+        <img class="ic-on" src="/buttons/alarm-on.png" alt="">
+        <span class="cap" id="alarmCap"></span>
+      </button>
+      <button class="iconbtn" id="timerBtn" data-state="off" type="button" aria-label="Timer">
+        <img class="ic-off" src="/buttons/timer-off.png" alt="">
+        <img class="ic-on" src="/buttons/timer-on.png" alt="">
+        <span class="cap" id="timerCap"></span>
+      </button>
+      <button class="iconbtn" id="calendarBtn" data-state="off" type="button" aria-label="Calendar">
+        <img class="ic-off" src="/buttons/calendar.png" alt="">
+      </button>
+    </nav>
+
+    <section class="content">
+      <div class="tomorrow" id="tomorrow">—</div>
+      <div class="today">
+        <span class="wicon" id="wicon"></span>
+        <span class="temp" id="temp">—°</span>
+        <span class="cond" id="cond">—</span>
+        <span class="rain" id="rain">—</span>
+      </div>
+      <div class="clock" id="clock">
+        <span class="time" id="time">—:—</span><span class="ampm" id="ampm">—</span>
+      </div>
+      <ul class="todos-list" id="todos"></ul>
+    </section>
+  </main>
+
+  <div class="modal" id="timerModal" hidden>
+    <button class="close" data-close type="button" aria-label="Close">×</button>
+    <div class="modal-inner">
+      <div class="modal-title">timer</div>
+      <ul class="pick-list" id="timerOptions">
+        <li data-minutes="10">10 minutes</li>
+        <li data-minutes="15">15 minutes</li>
+        <li data-minutes="30">30 minutes</li>
+        <li data-minutes="45">45 minutes</li>
+        <li data-minutes="60">1 hour</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="modal" id="alarmModal" hidden>
+    <button class="close" data-close type="button" aria-label="Close">×</button>
+    <div class="modal-inner">
+      <div class="modal-title">alarm</div>
+      <div class="wheels">
+        <div class="wheel" id="hourWheel" data-unit="hour"></div>
+        <div class="wheel-sep">:</div>
+        <div class="wheel" id="minuteWheel" data-unit="minute"></div>
+        <div class="ampm-toggle" id="ampmToggle">
+          <button data-ampm="am" class="on" type="button">am</button>
+          <button data-ampm="pm" type="button">pm</button>
+        </div>
+      </div>
+      <button class="commit" id="alarmCommit" type="button">set</button>
+    </div>
+  </div>
+
+  <div class="modal" id="calendarModal" hidden>
+    <button class="close" data-close type="button" aria-label="Close">×</button>
+    <div class="modal-inner calendar-inner">
+      <div class="modal-title">calendar</div>
+      <div class="calendar-body" id="calendarBody">loading…</div>
+    </div>
+  </div>
+
+  <div class="firing" id="firing" hidden>
+    <div class="firing-text" id="firingText">tap to dismiss</div>
+  </div>
+
+  <audio id="alarmAudio" src="alarm.mp3" loop preload="auto"></audio>
+
+  <script src="app.js"></script>
+</body>
+</html>
