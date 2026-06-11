@@ -41,12 +41,12 @@ ul { list-style: none; }
   position: relative;
   z-index: 1;
   display: grid;
-  grid-template-columns: auto 1fr;
+  grid-template-columns: auto clamp(130px, 13vw, 190px) 1fr;
   align-items: center;
   width: 100vw;
   height: 100vh;
   padding: 3.5vh var(--pad);
-  gap: 4vw;
+  column-gap: 3vw;
 }
 
 /* warm evening gradient overlay (opacity driven by JS) */
@@ -68,11 +68,6 @@ ul { list-style: none; }
 }
 
 /* left icon rail */
-.sidebar {
-  display: flex;
-  align-items: center;
-  gap: 3vw;
-}
 .rail {
   display: flex;
   flex-direction: column;
@@ -169,14 +164,16 @@ ul { list-style: none; }
 .countdowns {
   display: flex;
   flex-direction: column;
+  align-items: stretch;
   align-self: center;
+  justify-self: center;
   gap: 2.4rem;
   width: clamp(130px, 13vw, 190px);
 }
 .countdowns:empty { display: none; }
 .countdown {
   min-width: 0;
-  text-align: center;
+  text-align: left;
 }
 .countdown-name {
   font-size: 1.45rem;
