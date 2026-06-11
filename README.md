@@ -7,7 +7,7 @@
 ## Features & Integrations
 
 - **Home Assistant**  - integration for button shortcuts (replace icons in `/buttons` as desired)
-- **Notion** -  database integration (one for cal, one for tasks, see below for config)
+- **Notion** - database integration for tasks, calendar events, and date countdowns
 - **Weather** -  from BoM (Australia)
 - **Alarm/Timer** - quick alarm / timer with custom audio & graphic overlay
 
@@ -20,7 +20,7 @@
 ```sh
 npm install
 cp .env.example .env
-# fill in NOTION_TOKEN + NOTION_DATABASE_ID + NOTION_WORK_ID
+# fill in the NOTION_* values
 npm start
 ```
 
@@ -35,7 +35,7 @@ Open `http://<server-ip>:3000` on the iPad. Share → **Add to Home Screen**. La
 
 ## Notion
 
-#### There are two databases configured - one displays the tasks below the clock, the other displays events in the calendar modal. 
+#### There are three databases configured: tasks, calendar events, and upcoming date countdowns.
 
 ### Database - To Do
 - This the main database set by `NOTION_DATABASE_ID` and appears under the clock
@@ -46,6 +46,11 @@ Open `http://<server-ip>:3000` on the iPad. Share → **Add to Home Screen**. La
   - This does not need to be a 'work' database per say, it was just built out to be my work calendar
 * This will display events for the day only in the modal when opened via the calendar button.
 
+### Database - Key Dates
+- Set this database as `NOTION_DATES_ID`.
+- Add a title property and a date property. Upcoming entries appear below the clock, ordered soonest first.
+- An entry disappears when its date arrives in Melbourne.
+
 ### How to setup Notion
 
 1. Go to https://www.notion.so/profile/integrations → **+ New integration** → internal. Copy the secret into `NOTION_TOKEN`.
@@ -53,6 +58,7 @@ Open `http://<server-ip>:3000` on the iPad. Share → **Add to Home Screen**. La
 3. Copy the DB ID from the URL: `notion.so/<workspace>/<32-hex-id>?v=…` → the 32-hex chunk is `NOTION_DATABASE_ID`.
 4. The server reads the page's title property automatically. If your DB has a `Done` or `Complete` checkbox, those items are hidden.
 5. Add a separate work/calendar database ID as `NOTION_WORK_ID`. Share that database with the same integration. The calendar modal reads only items dated today from this database.
+6. Add a key dates database ID as `NOTION_DATES_ID` and share it with the integration.
 
 
 
@@ -133,6 +139,7 @@ Add to `.env`:
 NOTION_TOKEN=your-notion-integration-secret
 NOTION_DATABASE_ID=your-task-database-id
 NOTION_WORK_ID=your-notion-database2-id
+NOTION_DATES_ID=your-key-dates-database-id
 ```
 
 The work database needs at least one date property. The server prefers date-like property names such as `Date`, `Day`, `When`, `Time`, `Calendar`, or `Start`, then falls back to the first date property it finds. Items are filtered to the current Melbourne day. Date-only items appear as all-day rows; items with times appear with their start/end times.

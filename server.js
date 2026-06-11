@@ -16,11 +16,13 @@ const MELBOURNE_AAC = 'VIC_PT042';
 const WEATHER_TTL_MS = 10 * 60 * 1000;
 const TODOS_TTL_MS = 60 * 1000;
 const CALENDAR_TTL_MS = 60 * 1000;
+const DATES_TTL_MS = 60 * 1000;
 
 const cache = {
   weather: { data: null, fetchedAt: 0, inflight: null },
   todos: { data: null, fetchedAt: 0, inflight: null },
   calendar: { data: null, fetchedAt: 0, inflight: null },
+  dates: { data: null, fetchedAt: 0, inflight: null },
 };
 
 async function fetchBomObs() {
@@ -325,6 +327,67 @@ async function getCalendar() {
   }
 }
 
+// ---------------- NOTION Key Dates ---------------- //
+
+function notionDateString(iso) {
+  if (!iso) return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) return iso;
+  const ms = Date.parse(iso);
+  return Number.isNaN(ms) ? null : melbourneDateString(new Date(ms));
+}
+
+function calendarDayDifference(fromDate, toDate) {
+  const toUtcDay = value => {
+    const [year, month, day] = value.split('-').map(Number);
+    return Date.UTC(year, month - 1, day);
+  };
+  return Math.round((toUtcDay(toDate) - toUtcDay(fromDate)) / (24 * 60 * 60 * 1000));
+}
+
+async function loadDates() {
+  const datesDbId = process.env.NOTION_DATES_ID;
+  if (!datesDbId) throw new Error('Missing NOTION_DATES_ID');
+
+  const today = melbourneDateString();
+  const pages = await queryNotionDatabasePages(datesDbId, { pageSize: 100 });
+
+  return pages
+    .map(page => {
+      const date = notionDateString(firstNotionDate(page)?.start);
+      const days = date ? calendarDayDifference(today, date) : null;
+      return {
+        id: page.id,
+        title: notionPageTitle(page),
+        date,
+        days,
+      };
+    })
+    .filter(item => item.title && item.date && item.days > 0)
+    .sort((a, b) => a.days - b.days || a.date.localeCompare(b.date) || a.title.localeCompare(b.title));
+}
+
+async function getDates() {
+  const now = Date.now();
+  if (cache.dates.data && now - cache.dates.fetchedAt < DATES_TTL_MS) return cache.dates.data;
+  if (cache.dates.inflight) return cache.dates.inflight;
+  cache.dates.inflight = (async () => {
+    try {
+      const data = await loadDates();
+      cache.dates.data = data;
+      cache.dates.fetchedAt = Date.now();
+      return data;
+    } finally {
+      cache.dates.inflight = null;
+    }
+  })();
+  try {
+    return await cache.dates.inflight;
+  } catch (err) {
+    if (cache.dates.data) return cache.dates.data;
+    throw err;
+  }
+}
+
 // ---- Slack reminders --------------------------------------------------------
 // Reads the Notion DB for items with a `By` date and a `Freq` cadence, and posts
 // "Reminder: <Name>" to Slack at the cadence's clock times once `By` has passed.
@@ -536,6 +599,15 @@ app.get('/api/calendar', async (req, res) => {
   try {
     const data = await getCalendar();
     res.json({ ...data, staleSince: cache.calendar.fetchedAt });
+  } catch (err) {
+    res.status(502).json({ error: String(err.message || err) });
+  }
+});
+
+app.get('/api/dates', async (req, res) => {
+  try {
+    const data = await getDates();
+    res.json({ items: data, staleSince: cache.dates.fetchedAt });
   } catch (err) {
     res.status(502).json({ error: String(err.message || err) });
   }

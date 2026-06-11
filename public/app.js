@@ -6,7 +6,7 @@
     temp: $('#temp'), wicon: $('#wicon'), cond: $('#cond'), rain: $('#rain'),
     tomorrow: $('#tomorrow'),
     time: $('#time'), ampm: $('#ampm'), clock: $('#clock'),
-    todos: $('#todos'),
+    countdowns: $('#countdowns'), todos: $('#todos'),
     warmth: $('#warmth'),
     houseBtn: $('#houseBtn'), upstairsBtn: $('#upstairsBtn'),
     alarmBtn: $('#alarmBtn'), timerBtn: $('#timerBtn'), calendarBtn: $('#calendarBtn'),
@@ -123,12 +123,40 @@
     }
   }
 
+  async function loadDates() {
+    try {
+      const res = await fetch('/api/dates');
+      if (!res.ok) throw new Error(res.status);
+      const { items } = await res.json();
+      clearChildren(els.countdowns);
+      for (const item of items) {
+        const countdown = document.createElement('div');
+        countdown.className = 'countdown';
+
+        const name = document.createElement('div');
+        name.className = 'countdown-name';
+        name.textContent = item.title;
+
+        const days = document.createElement('div');
+        days.className = 'countdown-days';
+        days.textContent = `${item.days} ${item.days === 1 ? 'Day' : 'Days'}`;
+
+        countdown.append(name, days);
+        els.countdowns.appendChild(countdown);
+      }
+    } catch {
+      /* keep previous */
+    }
+  }
+
   loadWeather();
   loadTodos();
+  loadDates();
   setInterval(loadWeather, 5 * 60 * 1000);
   setInterval(loadTodos, 5 * 60 * 1000);
+  setInterval(loadDates, 5 * 60 * 1000);
   document.addEventListener('visibilitychange', () => {
-    if (!document.hidden) { loadWeather(); loadTodos(); }
+    if (!document.hidden) { loadWeather(); loadTodos(); loadDates(); }
   });
 
 
