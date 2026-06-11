@@ -68,6 +68,11 @@ ul { list-style: none; }
 }
 
 /* left icon rail */
+.sidebar {
+  display: flex;
+  align-items: center;
+  gap: 3vw;
+}
 .rail {
   display: flex;
   flex-direction: column;
@@ -162,26 +167,23 @@ ul { list-style: none; }
 
 /* upcoming dates */
 .countdowns {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
-  width: min(100%, 760px);
-  align-items: start;
-  margin-top: -0.5rem;
+  display: flex;
+  flex-direction: column;
+  align-self: center;
+  gap: 2.4rem;
+  width: clamp(130px, 13vw, 190px);
 }
 .countdowns:empty { display: none; }
 .countdown {
   min-width: 0;
-  padding: 0 0.75rem;
   text-align: center;
 }
 .countdown-name {
-  overflow: hidden;
   font-size: 1.45rem;
   font-weight: 650;
   line-height: 1.1;
   letter-spacing: -0.02em;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 .countdown-days {
   margin-top: 0.2rem;
@@ -192,7 +194,7 @@ ul { list-style: none; }
 }
 
 /* todos */
-.todos-list { display: flex; flex-direction: column; gap: 0.95rem; margin-top: 2.2rem; align-items: flex-end; }
+.todos-list { display: flex; flex-direction: column; gap: 0.95rem; margin-top: 1em; align-items: flex-end; }
 .todos-list li {
   font-size: 2.2rem;
   font-weight: 350;
