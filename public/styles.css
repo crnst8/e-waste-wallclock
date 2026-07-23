@@ -91,9 +91,12 @@ ul { list-style: none; }
   height: 58%;
   object-fit: contain;
 }
-.iconbtn .ic-on { display: none; }
+.iconbtn .ic-on,
+.iconbtn .ic-low { display: none; }
 .iconbtn[data-state="on"] .ic-off { display: none; }
 .iconbtn[data-state="on"] .ic-on { display: block; }
+.iconbtn[data-state="low"] .ic-off { display: none; }
+.iconbtn[data-state="low"] .ic-low { display: block; }
 .iconbtn:active { opacity: 0.6; }
 .iconbtn .cap {
   position: absolute;

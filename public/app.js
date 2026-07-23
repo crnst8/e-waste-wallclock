@@ -8,7 +8,7 @@
     time: $('#time'), ampm: $('#ampm'), clock: $('#clock'),
     countdowns: $('#countdowns'), todos: $('#todos'),
     warmth: $('#warmth'),
-    houseBtn: $('#houseBtn'), upstairsBtn: $('#upstairsBtn'),
+    bossEqBtn: $('#bossEqBtn'), officeLightsBtn: $('#officeLightsBtn'),
     alarmBtn: $('#alarmBtn'), timerBtn: $('#timerBtn'), calendarBtn: $('#calendarBtn'),
     alarmCap: $('#alarmCap'), timerCap: $('#timerCap'),
     timerModal: $('#timerModal'), alarmModal: $('#alarmModal'), calendarModal: $('#calendarModal'),
@@ -422,49 +422,49 @@
     renderFooter();
   });
 
-  // ---------- home assistant lights ----------
-  const LIGHTS = [
-    { target: 'house', btn: els.houseBtn },
-    { target: 'upstairs', btn: els.upstairsBtn },
+  // ---------- home assistant controls ----------
+  const HA_CONTROLS = [
+    { target: 'bossEq', btn: els.bossEqBtn, states: ['off', 'on'] },
+    { target: 'officeLights', btn: els.officeLightsBtn, states: ['off', 'on', 'low'] },
   ];
 
-  function applyLightState(states) {
-    for (const { target, btn } of LIGHTS) {
+  function applyHaState(states) {
+    for (const { target, btn, states: allowedStates } of HA_CONTROLS) {
       const st = states[target];
-      if (st === 'on' || st === 'off') btn.dataset.state = st;
+      if (allowedStates.includes(st)) btn.dataset.state = st;
     }
   }
 
-  async function pollLights() {
+  async function pollHaControls() {
     try {
       const res = await fetch('/api/ha/state');
       if (!res.ok) throw new Error(res.status);
-      applyLightState(await res.json());
+      applyHaState(await res.json());
     } catch { /* keep previous */ }
   }
 
-  for (const { target, btn } of LIGHTS) {
+  for (const { target, btn, states } of HA_CONTROLS) {
     btn.addEventListener('click', async () => {
-      // optimistic flip for instant feedback
-      btn.dataset.state = btn.dataset.state === 'on' ? 'off' : 'on';
+      const nextState = states[(states.indexOf(btn.dataset.state) + 1) % states.length] || states[0];
+      btn.dataset.state = nextState;
       try {
-        const res = await fetch('/api/ha/toggle', {
+        const res = await fetch('/api/ha/action', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ target }),
         });
         if (res.ok) {
           const { state } = await res.json();
-          if (state === 'on' || state === 'off') btn.dataset.state = state;
+          if (states.includes(state)) btn.dataset.state = state;
         }
       } catch { /* next poll reconciles */ }
-      setTimeout(pollLights, 1500);
+      setTimeout(pollHaControls, 1500);
     });
   }
 
-  pollLights();
-  setInterval(pollLights, 8000);
+  pollHaControls();
+  setInterval(pollHaControls, 8000);
   document.addEventListener('visibilitychange', () => {
-    if (!document.hidden) pollLights();
+    if (!document.hidden) pollHaControls();
   });
 })();

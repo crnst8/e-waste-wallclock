@@ -508,14 +508,21 @@ function startReminderScheduler() {
 }
 
 // ---- Home Assistant --------------------------------------------------------
-// Proxies light state/toggle to a local HA instance so the iPad never sees the
-// token. `house` is the all-lights group; `upstairs` a subset.
+// Proxies button actions to a local HA instance so the iPad never sees the token.
 const HA_IP = process.env.HA_IP;
 const HA_TOKEN = process.env.ACCESS_TOKEN;
-const HA_ENTITIES = {
-  house: process.env.HOUSE_ENTITY_NAME,
-  upstairs: process.env.UPSTAIRS_ENTITY_NAME,
+const HA_CONTROLS = {
+  bossEq: {
+    entityId: process.env.BOSS_EQ_ENTITY_NAME,
+    domain: 'switch',
+  },
+  officeLights: {
+    entityId: process.env.OFFICE_LIGHT_ENTITY_NAME,
+    highSceneId: process.env.OFFICE_HIGH_SCENE_ENTITY_NAME,
+    lowSceneId: process.env.OFFICE_LOW_SCENE_ENTITY_NAME,
+  },
 };
+let officeLightsMode = null;
 
 async function haFetch(path, opts = {}) {
   if (!HA_IP || !HA_TOKEN) throw new Error('HA not configured');
@@ -532,10 +539,28 @@ async function haFetch(path, opts = {}) {
   return res;
 }
 
-async function haState(entityId) {
+async function haStateObject(entityId) {
   const res = await haFetch(`/api/states/${entityId}`);
-  const json = await res.json();
-  return json.state; // "on" | "off" | "unavailable"
+  return await res.json();
+}
+
+async function haState(entityId) {
+  const json = await haStateObject(entityId);
+  return json.state;
+}
+
+async function resolveOfficeLightsMode() {
+  const cfg = HA_CONTROLS.officeLights;
+  if (!cfg.entityId) return null;
+  const lightState = await haState(cfg.entityId);
+  if (lightState === 'off') {
+    officeLightsMode = 'off';
+    return 'off';
+  }
+  if (lightState !== 'on') return null;
+  if (officeLightsMode === 'on' || officeLightsMode === 'low') return officeLightsMode;
+  officeLightsMode = 'on';
+  return officeLightsMode;
 }
 
 const app = express();
@@ -543,34 +568,64 @@ app.use(express.json());
 app.use(express.static('public'));
 app.use('/buttons', express.static('buttons'));
 
-// Current on/off state of both light groups.
+// Current visual state for the HA-backed dashboard buttons.
 app.get('/api/ha/state', async (req, res) => {
   try {
-    const entries = await Promise.all(
-      Object.entries(HA_ENTITIES).map(async ([key, id]) => {
-        if (!id) return [key, null];
-        try { return [key, await haState(id)]; }
-        catch { return [key, null]; }
-      })
-    );
-    res.json(Object.fromEntries(entries));
+    const [bossEq, officeLights] = await Promise.all([
+      HA_CONTROLS.bossEq.entityId
+        ? haState(HA_CONTROLS.bossEq.entityId).catch(() => null)
+        : null,
+      resolveOfficeLightsMode().catch(() => null),
+    ]);
+    res.json({ bossEq, officeLights });
   } catch (err) {
     res.status(502).json({ error: String(err.message || err) });
   }
 });
 
-// Toggle one group; returns its resulting state.
-app.post('/api/ha/toggle', async (req, res) => {
+// Run the next action for one dashboard control; returns its resulting visual state.
+app.post('/api/ha/action', async (req, res) => {
   const target = req.body?.target;
-  const entityId = HA_ENTITIES[target];
-  if (!entityId) return res.status(400).json({ error: 'unknown target' });
+  if (!Object.hasOwn(HA_CONTROLS, target)) return res.status(400).json({ error: 'unknown target' });
   try {
-    await haFetch('/api/services/light/toggle', {
-      method: 'POST',
-      body: JSON.stringify({ entity_id: entityId }),
-    });
-    const state = await haState(entityId).catch(() => null);
-    res.json({ target, state });
+    if (target === 'bossEq') {
+      const { entityId, domain } = HA_CONTROLS.bossEq;
+      if (!entityId) return res.status(400).json({ error: 'target not configured' });
+      await haFetch(`/api/services/${domain}/toggle`, {
+        method: 'POST',
+        body: JSON.stringify({ entity_id: entityId }),
+      });
+      const state = await haState(entityId).catch(() => null);
+      return res.json({ target, state });
+    }
+
+    const cfg = HA_CONTROLS.officeLights;
+    if (!cfg.entityId || !cfg.highSceneId || !cfg.lowSceneId) {
+      return res.status(400).json({ error: 'target not configured' });
+    }
+
+    const currentMode = await resolveOfficeLightsMode();
+    if (currentMode === 'off') {
+      await haFetch('/api/services/scene/turn_on', {
+        method: 'POST',
+        body: JSON.stringify({ entity_id: cfg.highSceneId }),
+      });
+      officeLightsMode = 'on';
+    } else if (currentMode === 'on') {
+      await haFetch('/api/services/scene/turn_on', {
+        method: 'POST',
+        body: JSON.stringify({ entity_id: cfg.lowSceneId }),
+      });
+      officeLightsMode = 'low';
+    } else {
+      await haFetch('/api/services/light/turn_off', {
+        method: 'POST',
+        body: JSON.stringify({ entity_id: cfg.entityId }),
+      });
+      officeLightsMode = 'off';
+    }
+
+    res.json({ target, state: officeLightsMode });
   } catch (err) {
     res.status(502).json({ error: String(err.message || err) });
   }
